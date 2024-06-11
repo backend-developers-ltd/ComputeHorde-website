@@ -1,10 +1,13 @@
 import contextlib
+import csv
+import datetime
+import io
 import shutil
 import tempfile
-import zipfile
 from collections import defaultdict
 from datetime import timedelta
 
+import pydantic
 import requests
 import structlog
 from asgiref.sync import async_to_sync
@@ -15,7 +18,7 @@ from django.conf import settings
 from django.db import connection
 from django.utils.timezone import now
 from more_itertools import one, partition
-from pydantic import ValidationError, parse_obj_as
+from pydantic import parse_obj_as
 from requests import RequestException
 
 from project.celery import app
@@ -30,7 +33,7 @@ from .models import (
     Subnet,
     Validator,
 )
-from .schemas import ForceDisconnect, HardwareSpec, Receipt
+from .schemas import ForceDisconnect, HardwareSpec, Receipt, ReceiptPayload
 from .specs import normalize_gpu_name
 from .utils import fetch_compute_subnet_hardware, is_validator
 
@@ -165,15 +168,17 @@ def record_compute_subnet_hardware() -> None:
 
 @app.task
 def fetch_receipts_from_miner(hotkey: str, ip: str, port: int):
+    # Origin of this task may be found in ComputeHorde repo:
+    # https://github.com/backend-developers-ltd/ComputeHorde/blob/8b35d24142265171e863e98b3c517ffee007d9a0/compute_horde/compute_horde/receipts.py#L34
+
     to_create = []
     latest_job_receipt = JobReceipt.objects.filter(miner_hotkey=hotkey).order_by("-time_started").first()
     cutoff_time = latest_job_receipt.time_started - RECEIPTS_CUTOFF_TOLERANCE if latest_job_receipt else None
 
     with contextlib.ExitStack() as exit_stack:
         try:
-            response = exit_stack.enter_context(
-                requests.get(f"http://{ip}:{port}/get-receipts", stream=True, timeout=5)
-            )
+            receipts_url = f"http://{ip}:{port}/receipts/receipts.csv"
+            response = exit_stack.enter_context(requests.get(receipts_url, stream=True, timeout=5))
             response.raise_for_status()
         except RequestException as e:
             log.info("failed to get receipts from miner", miner_hotkey=hotkey, error=e)
@@ -183,12 +188,23 @@ def fetch_receipts_from_miner(hotkey: str, ip: str, port: int):
         shutil.copyfileobj(response.raw, temp_file)
         temp_file.seek(0)
 
-        zip_file = exit_stack.enter_context(zipfile.ZipFile(temp_file))
-        for zip_info in zip_file.filelist:
+        wrapper = io.TextIOWrapper(temp_file)
+        csv_reader = csv.DictReader(wrapper)
+        for raw_receipt in csv_reader:
             try:
-                raw_receipt = zip_file.read(zip_info)
-                receipt = Receipt.parse_raw(raw_receipt)
-            except ValidationError:
+                receipt = Receipt(
+                    payload=ReceiptPayload(
+                        job_uuid=raw_receipt["job_uuid"],
+                        miner_hotkey=raw_receipt["miner_hotkey"],
+                        validator_hotkey=raw_receipt["validator_hotkey"],
+                        time_started=datetime.datetime.fromisoformat(raw_receipt["time_started"]),
+                        time_took_us=int(raw_receipt["time_took_us"]),
+                        score_str=raw_receipt["score_str"],
+                    ),
+                    validator_signature=raw_receipt["validator_signature"],
+                    miner_signature=raw_receipt["miner_signature"],
+                )
+            except (ValueError, pydantic.ValidationError):
                 log.warning("Miner sent invalid receipt", miner_hotkey=hotkey, raw_receipt=raw_receipt)
                 continue
 

@@ -1,6 +1,6 @@
+import csv
 import io
 import json
-import zipfile
 from datetime import datetime
 from typing import NamedTuple
 
@@ -226,15 +226,42 @@ async def test__websocket__disconnect_validator_if_become_inactive(
 
 
 def fetch_receipts_test_helper(monkeypatch, mocked_responses, raw_receipt_payloads):
-    zip_buf = io.BytesIO()
-    with zipfile.ZipFile(zip_buf, "w") as zip_file:
-        for raw_receipt_payload in raw_receipt_payloads:
-            zip_file.writestr(json.loads(raw_receipt_payload)["payload"]["job_uuid"] + ".json", raw_receipt_payload)
+    buf = io.StringIO()
+    csv_writer = csv.writer(buf)
+    csv_writer.writerow(
+        [
+            "job_uuid",
+            "miner_hotkey",
+            "validator_hotkey",
+            "time_started",
+            "time_took_us",
+            "score_str",
+            "validator_signature",
+            "miner_signature",
+        ]
+    )
+    for raw_receipt_payload in raw_receipt_payloads:
+        receipt = json.loads(raw_receipt_payload)
+        payload = receipt.get("payload", {})
+        csv_writer.writerow(
+            [
+                payload.get("job_uuid", ""),
+                payload.get("miner_hotkey", ""),
+                payload.get("validator_hotkey", ""),
+                payload.get("time_started", ""),
+                payload.get("time_took_us", ""),
+                payload.get("score_str", ""),
+                receipt.get("validator_signature", ""),
+                receipt.get("miner_signature", ""),
+            ]
+        )
 
-    zip_buf.seek(0)
+    buf.seek(0)
 
-    mocked_responses.get("http://127.0.0.1:8000/get-receipts", status=404)  # this one should be gracefully ignored
-    mocked_responses.get("http://127.0.0.2:8000/get-receipts", body=zip_buf.read())
+    mocked_responses.get(
+        "http://127.0.0.1:8000/receipts/receipts.csv", status=404
+    )  # this one should be gracefully ignored
+    mocked_responses.get("http://127.0.0.2:8000/receipts/receipts.csv", body=buf.read())
 
     class MockedMetagraph:
         def __init__(self, *args, **kwargs):
