@@ -1,0 +1,125 @@
+version: '3.7'
+
+services:
+  redis:
+    image: redis:6-alpine
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: redis-cli ping
+    restart: unless-stopped
+    volumes:
+      - ./redis/data:/data
+    logging: &logging
+      driver: journald
+      options:
+        tag: '{{.Name}}'
+
+  db:
+    image: postgres:14.0-alpine
+    healthcheck:
+      test: pg_isready -U ${POSTGRES_USER} || exit 1
+    restart: unless-stopped
+    env_file: ./.env
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+    volumes:
+      - ./db/data:/var/lib/postgresql/data
+    logging:
+      <<: *logging
+
+  app:
+    build:
+      context: .
+      dockerfile: app/Dockerfile
+    image: project/app
+    healthcheck:
+      test: wget -q --spider 127.0.0.1:8000/admin/login/ || exit 1
+    init: true
+    restart: unless-stopped
+    env_file: ./.env
+    volumes:
+      - backend-static:/root/src/static
+      - ./media:/root/src/media
+    depends_on:
+      - redis
+      - db
+    logging:
+      <<: *logging
+
+  celery-worker:
+    image: project/app
+    init: true
+    healthcheck:
+      test: celery -A project status > /dev/null || exit 1
+    restart: unless-stopped
+    env_file: ./.env
+    environment:
+      - DEBUG=off
+    command: ./celery-entrypoint.sh
+    tmpfs: /run
+    depends_on:
+      - redis
+    logging:
+      <<: *logging
+
+  celery-beat:
+    image: project/app
+    init: true
+    restart: unless-stopped
+    env_file: ./.env
+    environment:
+      - DEBUG=off
+    command: nice celery -A project beat -l INFO --schedule /tmp/celerybeat-schedule -f /tmp/logs/celery-beat.log
+    volumes:
+      - ./logs:/tmp/logs
+    depends_on:
+      - redis
+    logging:
+      <<: *logging
+
+  celery-flower:
+    image: project/app
+    healthcheck:
+      test: wget --user "${CELERY_FLOWER_USER}" --password "${CELERY_FLOWER_PASSWORD}" -qO- 127.0.0.1:5555 > /dev/null || exit 1
+    init: true
+    restart: unless-stopped
+    env_file: ./.env
+    environment:
+      - DEBUG=off
+    command: celery --app=project --broker="${CELERY_BROKER_URL}" flower --basic_auth="${CELERY_FLOWER_USER}:${CELERY_FLOWER_PASSWORD}"
+    depends_on:
+      - celery-worker
+    ports:
+      - 5555:5555
+    logging:
+      <<: *logging
+
+  nginx:
+    image: 'ghcr.io/reef-technologies/nginx-rt:v1.2.1'
+    restart: unless-stopped
+    healthcheck:
+      test: wget -q --spider 0.0.0.0:80 || exit 1
+    environment:
+      - NGINX_HOST=${NGINX_HOST}
+    volumes:
+      - ./nginx/templates:/etc/nginx/templates
+      - ./nginx/config_helpers:/etc/nginx/config_helpers
+      - backend-static:/srv/static:ro
+      - ./media:/srv/media:ro
+      - ./letsencrypt/etc:/etc/letsencrypt
+      - ./nginx/monitoring_certs:/etc/monitoring_certs
+    depends_on:
+      - app
+
+    command: nginx -g 'daemon off;'
+    ports:
+      - 80:80
+      - 443:443
+
+    logging:
+      <<: *logging
+
+volumes:
+  backend-static:
