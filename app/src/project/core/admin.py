@@ -205,6 +205,8 @@ class JobAdmin(admin.ModelAdmin):
     def save_model(self, request, obj, form, change):
         try:
             super().save_model(request, obj, form, change)
+        except Miner.DoesNotExist:
+            self.message_user(request, "No active miners available", level=messages.ERROR)
         except Validator.DoesNotExist:
             self.message_user(request, "No active validators available", level=messages.ERROR)
 
