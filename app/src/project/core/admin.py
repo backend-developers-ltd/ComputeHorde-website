@@ -4,7 +4,18 @@ from django.db.models import QuerySet
 from django.http.request import HttpRequest
 from django.utils.safestring import mark_safe
 
-from .models import GPU, Channel, Job, JobReceipt, JobStatus, Miner, UserPreferences, Validator
+from .models import (
+    GPU,
+    Channel,
+    Job,
+    JobFeedback,
+    JobReceipt,
+    JobStatus,
+    Miner,
+    SignatureInfo,
+    UserPreferences,
+    Validator,
+)
 
 admin.site.site_header = "ComputeHorde Administration"
 admin.site.site_title = "project"
@@ -214,3 +225,32 @@ class JobReceiptAdmin(admin.ModelAdmin):
     )
     search_fields = ("job_uuid", "miner_hotkey", "validator_hotkey")
     ordering = ("-time_started",)
+
+
+@register(JobFeedback)
+class JobFeedbackAdmin(admin.ModelAdmin):
+    list_display = (
+        "job",
+        "user",
+        "created_at",
+        "result_correctness",
+        "expected_duration",
+        "signature_info__signature_type",
+    )
+    search_fields = ("=job__uuid", "^user__username")
+    list_filter = ("created_at", "result_correctness")
+
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        queryset = queryset.select_related("job", "user", "signature_info")
+        return queryset
+
+    def signature_info__signature_type(self, obj):
+        return obj.signature_info.signature_type
+
+
+@admin.register(SignatureInfo)
+class SignatureInfoAdmin(admin.ModelAdmin):
+    list_display = ("timestamp_ns", "signature_type", "signatory", "signed_payload")
+    search_fields = ("=signature_type", "^signatory")
+    list_filter = ("signature_type",)
