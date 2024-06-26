@@ -2,9 +2,9 @@ name: Run linter and tests
 
 on:
   push:
-    branches: [master, main]
+    branches: [master, main, opensource]
   pull_request:
-    branches: [master, main]
+    branches: [master, main, opensource]
 
 env:
   PYTHON_DEFAULT_VERSION: "3.11"
