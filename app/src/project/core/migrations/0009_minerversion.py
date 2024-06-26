@@ -10,35 +10,35 @@ class Migration(migrations.Migration):
     ]
 
     operations = [
-        migrations.CreateModel(
-            name="MinerVersion",
-            fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("version", models.CharField(blank=True, default="", max_length=255)),
-                (
-                    "runner_version",
-                    models.CharField(blank=True, default="", max_length=255),
-                ),
-                ("created_at", models.DateTimeField(auto_now_add=True)),
-                (
-                    "miner",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="versions",
-                        to="core.miner",
-                    ),
-                ),
-            ],
-            options={
-                "indexes": [models.Index(fields=["created_at"], name="core_minerv_created_4bf732_idx")],
-            },
-        ),
+        # migrations.CreateModel(
+        #     name="MinerVersion",
+        #     fields=[
+        #         (
+        #             "id",
+        #             models.BigAutoField(
+        #                 auto_created=True,
+        #                 primary_key=True,
+        #                 serialize=False,
+        #                 verbose_name="ID",
+        #             ),
+        #         ),
+        #         ("version", models.CharField(blank=True, default="", max_length=255)),
+        #         (
+        #             "runner_version",
+        #             models.CharField(blank=True, default="", max_length=255),
+        #         ),
+        #         ("created_at", models.DateTimeField(auto_now_add=True)),
+        #         (
+        #             "miner",
+        #             models.ForeignKey(
+        #                 on_delete=django.db.models.deletion.CASCADE,
+        #                 related_name="versions",
+        #                 to="core.miner",
+        #             ),
+        #         ),
+        #     ],
+        #     options={
+        #         "indexes": [models.Index(fields=["created_at"], name="core_minerv_created_4bf732_idx")],
+        #     },
+        # ),
     ]
