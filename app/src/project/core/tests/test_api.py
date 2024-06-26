@@ -1,8 +1,14 @@
+import time
+from unittest.mock import patch
+
 import pytest
+from compute_horde_facilitator_sdk.v1 import Signature
 from django.contrib.auth.models import User
+from rest_framework.exceptions import ErrorDetail
 from rest_framework.test import APIClient
 
-from project.core.models import Job
+from project.core.models import Job, JobFeedback, SignatureInfo
+from project.core.services.signatures import signature_info_from_signature
 
 
 @pytest.fixture
@@ -18,6 +24,34 @@ def user(db):
 @pytest.fixture
 def another_user(db):
     return User.objects.create_user(username="anotheruser", password="anotherpass")
+
+
+@pytest.fixture
+def authenticated_api_client(api_client, user):
+    api_client.force_authenticate(user=user)
+    return api_client
+
+
+@pytest.fixture
+def signature():
+    return Signature(
+        signature_type="dummy_signature_type",
+        signatory="dummy_signatory",
+        timestamp_ns=time.time_ns(),
+        signature=b"dummy_signature",
+    )
+
+
+@pytest.fixture
+def signature_info(signature):
+    return signature_info_from_signature(signature, payload={"dummy": "payload"})
+
+
+@pytest.fixture
+def mock_signature_info_from_request(signature_info):
+    with patch("project.core.middleware.signature_middleware.signature_info_from_request") as mock:
+        mock.return_value = signature_info
+        yield mock
 
 
 @pytest.fixture
@@ -155,3 +189,48 @@ def test_docker_job_viewset_create(api_client, user, connected_validator, miner)
     assert job.env == {"MY_ENV": "my value"}
     assert job.use_gpu is True
     assert job.user == user
+
+
+def test_job_feedback__create__requires_signature(authenticated_api_client):
+    response = authenticated_api_client.put("/api/v1/jobs/123/feedback/", {"result_correctness": 1})
+    assert (response.status_code, response.data) == (
+        400,
+        {
+            "details": "Request signature not found, but is required",
+            "error": "Signature not found",
+        },
+    )
+
+
+def test_job_feedback__create_n_retrieve(authenticated_api_client, mock_signature_info_from_request, job_docker):
+    data = {"result_correctness": 0.5, "expected_duration": 10.0}
+
+    response = authenticated_api_client.put(f"/api/v1/jobs/{job_docker.uuid}/feedback/", data)
+    assert (response.status_code, response.data) == (201, data)
+
+    assert job_docker.feedback.result_correctness == data["result_correctness"]
+    assert job_docker.feedback.expected_duration == data["expected_duration"]
+
+    response = authenticated_api_client.get(f"/api/v1/jobs/{job_docker.uuid}/feedback/")
+    assert (response.status_code, response.data) == (200, data)
+
+
+def test_job_feedback__already_exists(authenticated_api_client, mock_signature_info_from_request, job_docker, user):
+    job_feedback = JobFeedback.objects.create(
+        job=job_docker,
+        result_correctness=1,
+        user=user,
+        signature_info=SignatureInfo.objects.create(
+            timestamp_ns=0,
+            signature=b"",
+            signed_payload={},
+        ),
+    )
+    data = {"result_correctness": 0.5, "expected_duration": 10.0}
+
+    response = authenticated_api_client.put(f"/api/v1/jobs/{job_docker.uuid}/feedback/", data)
+    assert (response.status_code, response.data) == (
+        409,
+        {"detail": ErrorDetail(string="Feedback already exists", code="conflict")},
+    )
+    assert JobFeedback.objects.get() == job_feedback
