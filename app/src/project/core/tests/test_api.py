@@ -88,7 +88,7 @@ def check_raw_job(job_result):
     assert set(job_result.keys()) & generated_fields == generated_fields
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 def test_job_viewset_list(api_client, user, job_docker, job_raw):
     api_client.force_authenticate(user=user)
     response = api_client.get("/api/v1/jobs/")
@@ -101,7 +101,7 @@ def test_job_viewset_list(api_client, user, job_docker, job_raw):
     check_raw_job(raw_result)
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 def test_job_viewset_list_object_permissions(api_client, user, job_docker, job_raw, another_user_job_raw):
     api_client.force_authenticate(user=user)
     response = api_client.get("/api/v1/jobs/")
@@ -112,7 +112,7 @@ def test_job_viewset_list_object_permissions(api_client, user, job_docker, job_r
     assert uuids == {str(job_docker.uuid), str(job_raw.uuid)}
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 def test_job_viewset_retrieve_docker(api_client, user, job_docker):
     api_client.force_authenticate(user=user)
     response = api_client.get(f"/api/v1/jobs/{job_docker.uuid}/")
@@ -120,7 +120,7 @@ def test_job_viewset_retrieve_docker(api_client, user, job_docker):
     check_docker_job(response.data)
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 def test_job_viewset_retrieve_raw(api_client, user, job_raw):
     api_client.force_authenticate(user=user)
     response = api_client.get(f"/api/v1/jobs/{job_raw.uuid}/")
@@ -128,7 +128,7 @@ def test_job_viewset_retrieve_raw(api_client, user, job_raw):
     check_raw_job(response.data)
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 def test_raw_job_viewset_create(api_client, user, connected_validator, miner):
     api_client.force_authenticate(user=user)
     data = {"raw_script": "print(1)", "input_url": "http://example.com/input.zip"}
@@ -142,7 +142,7 @@ def test_raw_job_viewset_create(api_client, user, connected_validator, miner):
     assert job.user == user
 
 
-@pytest.mark.django_db(transaction=True)
+@pytest.mark.django_db
 def test_docker_job_viewset_create(api_client, user, connected_validator, miner):
     api_client.force_authenticate(user=user)
     data = {"docker_image": "hello-world", "args": "my args", "env": {"MY_ENV": "my value"}, "use_gpu": True}
