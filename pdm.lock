@@ -5,7 +5,7 @@
 groups = ["default", "dev", "lint", "security_check", "test", "type_check"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.1"
-content_hash = "sha256:c92fc66286bfa7444e7f4e8eeaa486b703a030eed5fdf34b5b6b48f8df175106"
+content_hash = "sha256:1918d1b66e51a8ad98c64948eb9c9a5d8d1bca5bc8d4e7d8230c7693fc5f00ef"
 
 [[package]]
 name = "aiohttp"
@@ -634,11 +634,11 @@ files = [
 
 [[package]]
 name = "compute-horde-facilitator-sdk"
-version = "0.0.4.dev26"
+version = "0.0.4.dev27"
 requires_python = ">=3.11"
 git = "https://github.com/backend-developers-ltd/compute-horde-facilitator-sdk.git"
-ref = "job_feedbacking"
-revision = "1b91b73dba83ef22f55a2b4c6a94a8b3e25d7a4b"
+ref = "ff1714c4d7c57e38b300c21b624752e6367e40ab"
+revision = "ff1714c4d7c57e38b300c21b624752e6367e40ab"
 summary = "SDK library to communicate with ComputeHorde Facilitator"
 groups = ["default"]
 dependencies = [
