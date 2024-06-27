@@ -73,7 +73,6 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "django_filters",
     "project.core",
-    "project.stats_collector",
     "crispy_forms",
     "crispy_bootstrap5",
 ]
