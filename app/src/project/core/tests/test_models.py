@@ -205,10 +205,11 @@ def test__job__selecting_miner__user_preference(user, validator, communicator, a
 
 
 @pytest.mark.django_db(transaction=True)
-def test__job__selecting_miner__doesnt_exist(user, validator, communicator, authenticated):
+@pytest.mark.asyncio
+async def test__job__selecting_miner__doesnt_exist(user, validator, communicator, authenticated):
     """Check that new job is not created when there are no miners"""
     with pytest.raises(Miner.DoesNotExist):
-        Job.objects.create(
+        await Job.objects.acreate(
             user=user,
             validator=validator,
             miner=None,
@@ -219,7 +220,8 @@ def test__job__selecting_miner__doesnt_exist(user, validator, communicator, auth
 
 
 @pytest.mark.django_db(transaction=True)
-def test__job__selecting_miner__unavailable(
+@pytest.mark.asyncio
+async def test__job__selecting_miner__unavailable(
     user,
     validator,
     communicator,
@@ -230,7 +232,7 @@ def test__job__selecting_miner__unavailable(
     """Check that new job is not created when all miners are busy"""
 
     with pytest.raises(Miner.DoesNotExist):
-        Job.objects.create(
+        await Job.objects.acreate(
             user=user,
             validator=validator,
             miner=None,
