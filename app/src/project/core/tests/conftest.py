@@ -55,28 +55,28 @@ def other_signature(keypair):
     return f"0x{other_keypair.sign(keypair.public_key).hex()}"
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 def validator(db, keypair):
     return Validator.objects.create(ss58_address=keypair.ss58_address, is_active=True)
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 def connected_validator(db, validator):
     Channel.objects.create(name="test", validator=validator)
     return validator
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 def miner(db, keypair):
     return Miner.objects.create(ss58_address=keypair.ss58_address, is_active=True)
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 def miners(db):
     return Miner.objects.bulk_create([Miner(ss58_address=f"miner{i}", is_active=True) for i in range(10)])
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 def user(db):
     return User.objects.create(username="testuser", email="test@localhost")
 
