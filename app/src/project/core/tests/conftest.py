@@ -56,29 +56,29 @@ def other_signature(keypair):
 
 
 @pytest_asyncio.fixture
-async def validator(db, keypair):
-    return await Validator.objects.acreate(ss58_address=keypair.ss58_address, is_active=True)
+def validator(db, keypair):
+    return Validator.objects.create(ss58_address=keypair.ss58_address, is_active=True)
 
 
 @pytest_asyncio.fixture
-async def connected_validator(db, validator):
-    await Channel.objects.acreate(name="test", validator=validator)
+def connected_validator(db, validator):
+    Channel.objects.create(name="test", validator=validator)
     return validator
 
 
 @pytest_asyncio.fixture
-async def miner(db, keypair):
-    return await Miner.objects.acreate(ss58_address=keypair.ss58_address, is_active=True)
+def miner(db, keypair):
+    return Miner.objects.create(ss58_address=keypair.ss58_address, is_active=True)
 
 
 @pytest_asyncio.fixture
-async def miners(db):
-    return await Miner.objects.abulk_create([Miner(ss58_address=f"miner{i}", is_active=True) for i in range(10)])
+def miners(db):
+    return Miner.objects.bulk_create([Miner(ss58_address=f"miner{i}", is_active=True) for i in range(10)])
 
 
 @pytest_asyncio.fixture
-async def user(db):
-    return await User.objects.acreate(username="testuser", email="test@localhost")
+def user(db):
+    return User.objects.create(username="testuser", email="test@localhost")
 
 
 @pytest.fixture
@@ -95,9 +95,9 @@ def dummy_job_params(settings):
     )
 
 
-@pytest_asyncio.fixture
-async def job(db, user, validator, miner, dummy_job_params):
-    return await Job.objects.acreate(
+@pytest.fixture
+def job(db, user, validator, miner, dummy_job_params):
+    return Job.objects.create(
         user=user,
         validator=validator,
         miner=miner,
@@ -131,8 +131,8 @@ def job_status_update(job):
 
 
 @pytest_asyncio.fixture
-async def inactive_miner(db):
-    return await Miner.objects.acreate(ss58_address="inactive-miner", is_active=False)
+def inactive_miner(db):
+    return Miner.objects.create(ss58_address="inactive-miner", is_active=False)
 
 
 @pytest_asyncio.fixture

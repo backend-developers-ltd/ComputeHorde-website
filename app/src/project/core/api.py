@@ -2,12 +2,20 @@ import django_filters
 from django.core.exceptions import ObjectDoesNotExist
 from django_filters import fields
 from django_filters.rest_framework import DjangoFilterBackend
-from rest_framework import mixins, routers, serializers, viewsets
-from rest_framework.exceptions import ValidationError
+from rest_framework import mixins, routers, serializers, status, viewsets
+from rest_framework.exceptions import APIException, ValidationError
+from rest_framework.generics import get_object_or_404
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated
 
-from .models import Job
+from .middleware.signature_middleware import require_signature
+from .models import Job, JobFeedback
+
+
+class Conflict(APIException):
+    status_code = status.HTTP_409_CONFLICT
+    default_detail = "A conflict occurred."
+    default_code = "conflict"
 
 
 class DefaultModelPagination(PageNumberPagination):
@@ -72,6 +80,15 @@ class DockerJobSerializer(JobSerializer):
         )
 
 
+class JobFeedbackSerializer(serializers.ModelSerializer):
+    result_correctness = serializers.FloatField(min_value=0, max_value=1)
+    expected_duration = serializers.FloatField(min_value=0, required=False)
+
+    class Meta:
+        model = JobFeedback
+        fields = ["result_correctness", "expected_duration"]
+
+
 class BaseCreateJobViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     queryset = Job.objects.with_statuses()
 
@@ -120,6 +137,44 @@ class DockerJobViewset(BaseCreateJobViewSet):
     serializer_class = DockerJobSerializer
 
 
+class JobFeedbackViewSet(mixins.CreateModelMixin, mixins.RetrieveModelMixin, viewsets.GenericViewSet):
+    serializer_class = JobFeedbackSerializer
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self):
+        job_uuid = self.kwargs["job_uuid"]
+        return JobFeedback.objects.filter(
+            job__uuid=job_uuid,
+            job__user=self.request.user,
+            user=self.request.user,
+        )
+
+    def get_object(self):
+        return self.get_queryset().get()
+
+    def get_parent_job(self):
+        job_uuid = self.kwargs.get("job_uuid")
+        return get_object_or_404(Job, uuid=job_uuid, user=self.request.user)
+
+    def perform_create(self, serializer):
+        require_signature(self.request)
+        job = self.get_parent_job()
+        if JobFeedback.objects.filter(job=job, user=self.request.user).exists():
+            raise Conflict("Feedback already exists")
+
+        serializer.save(
+            job=job,
+            user=self.request.user,
+            signature_info=self.request.signature_info,
+        )
+
+    def get(self, request, *args, **kwargs):
+        return self.retrieve(request, *args, **kwargs)
+
+    def put(self, request, *args, **kwargs):
+        return self.create(request, *args, **kwargs)
+
+
 class APIRootView(routers.DefaultRouter.APIRootView):
     description = "api-root"
 
@@ -132,3 +187,4 @@ router = APIRouter()
 router.register(r"jobs", JobViewSet)
 router.register(r"job-docker", DockerJobViewset, basename="job_docker")
 router.register(r"job-raw", RawJobViewset, basename="job_raw")
+router.register(r"jobs/(?P<job_uuid>[^/.]+)/feedback", JobFeedbackViewSet, basename="job_feedback")

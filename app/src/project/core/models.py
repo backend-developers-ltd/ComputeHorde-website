@@ -33,6 +33,32 @@ class JobNotFinishedError(Exception):
     pass
 
 
+class SignatureInfo(models.Model):
+    """
+    Model for storing signed requests issued through Facilitator SDK.
+    """
+
+    signature_type = models.CharField(max_length=255, db_comment="type of the signature (e.g. 'bittensor')")
+    signatory = models.CharField(
+        max_length=1000, db_comment="identity of the signer (e.g. sa58 address if signature_type == bittensor"
+    )
+    timestamp_ns = models.BigIntegerField(
+        db_comment="UNIX timestamp in nanoseconds; required for signature verification"
+    )
+    signature = models.BinaryField(db_comment="signature of the payload")
+
+    signed_payload = models.JSONField(db_comment="raw payload that was signed")
+
+    @classmethod
+    def from_signature(cls, user, signature):
+        return cls.objects.create(
+            user=user,
+            timestamp_ns=signature.timestamp_ns,
+            signature=signature.signature,
+            signed_payload=signature.signed_payload,
+        )
+
+
 class AbstractNodeQuerySet(models.QuerySet):
     def with_last_job_time(self) -> QuerySet:
         return self.annotate(last_job_time=Max("jobs__created_at"))
@@ -374,6 +400,23 @@ class JobStatus(models.Model):
     def meta(self) -> JobStatusMetadata | None:
         if self.metadata:
             return JobStatusMetadata.parse_obj(self.metadata)
+
+
+class JobFeedback(models.Model):
+    """
+    Represents end user feedback for a job.
+    """
+
+    job = models.OneToOneField(Job, on_delete=models.CASCADE, related_name="feedback")
+    user = models.ForeignKey("auth.User", on_delete=models.PROTECT, related_name="feedback")
+    created_at = models.DateTimeField(default=now)
+
+    result_correctness = models.FloatField(default=1, help_text="<0-1> where 1 means 100% correct")
+    expected_duration = models.FloatField(blank=True, null=True, help_text="Expected duration of the job in seconds")
+    signature_info = models.ForeignKey(SignatureInfo, on_delete=models.CASCADE)
+
+    def __str__(self) -> str:
+        return f"Feedback for job {self.job.uuid} by {self.user.username}"
 
 
 class Subnet(models.Model):

@@ -87,6 +87,7 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django_structlog.middlewares.RequestMiddleware",
     "allauth.account.middleware.AccountMiddleware",
+    "project.core.middleware.FacilitatorSignatureMiddleware",
 ]
 
 AUTHENTICATION_BACKENDS = [
@@ -385,4 +386,5 @@ REST_FRAMEWORK = {
         "rest_framework.parsers.JSONParser",
     ],
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
+    "EXCEPTION_HANDLER": "project.core.exception_handlers.api_exception_handler",
 }
