@@ -5,7 +5,7 @@
 groups = ["default", "dev", "lint", "security_check", "test", "type_check"]
 strategy = ["cross_platform", "inherit_metadata"]
 lock_version = "4.4.2"
-content_hash = "sha256:999945e58b9fba06d659de4003bbb0a997f5d5074421f04dcc55e4de57cdfbb1"
+content_hash = "sha256:12d1fc5410d7181133e864a160d8242692c8f85d0d9e1dfeaa6f2ad3cec9e40a"
 
 [[package]]
 name = "aiohttp"
@@ -604,6 +604,24 @@ dependencies = [
 files = [
     {file = "colorlog-6.8.2-py3-none-any.whl", hash = "sha256:4dcbb62368e2800cb3c5abd348da7e53f6c362dda502ec27c560b2e58a66bd33"},
     {file = "colorlog-6.8.2.tar.gz", hash = "sha256:3e3e079a41feb5a1b64f978b5ea4f46040a94f11f0e8bbb8261e3dbbeca64d44"},
+]
+
+[[package]]
+name = "compute-horde"
+version = "0.0.7"
+requires_python = "==3.11.*"
+summary = ""
+groups = ["default"]
+dependencies = [
+    "bittensor<8.0.0,>=7.1.1",
+    "more-itertools>=10.2.0",
+    "pydantic<3,>=2.3",
+    "requests>=2.32.2",
+    "websockets<12.0,>=11.0",
+]
+files = [
+    {file = "compute_horde-0.0.7-py3-none-any.whl", hash = "sha256:5044ab3f85a0ef4f0031bd29e9bfa5e7ff2d94cab58354bee3dfcf15bdd12fbe"},
+    {file = "compute_horde-0.0.7.tar.gz", hash = "sha256:89097dc5a0f6f14c3bf386e5937105c78ebb7da1490939a9a712ab9074ad4406"},
 ]
 
 [[package]]

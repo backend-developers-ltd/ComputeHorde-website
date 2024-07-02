@@ -38,6 +38,7 @@ dependencies = [
     "tenacity>=8.3.0",
     "git+https://github.com/backend-developers-ltd/compute-horde-facilitator-sdk.git@ff1714c4d7c57e38b300c21b624752e6367e40ab",
     "httpx>=0.27.0",
+    "compute-horde>=0.0.7",
 ]
 description = "ComputeHorde app facilitating interaction between end users and Validators"
 authors = [{name = "Backend Developers LTD"}]
