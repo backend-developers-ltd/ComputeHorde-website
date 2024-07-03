@@ -4,6 +4,7 @@ from decimal import Decimal
 from typing import TYPE_CHECKING, Literal, Self
 
 import bittensor
+from compute_horde.executor_class import DEFAULT_EXECUTOR_CLASS, ExecutorClass
 from pydantic import BaseModel, Extra, Field, field_validator
 from pydantic_core import to_jsonable_python
 
@@ -59,6 +60,7 @@ class JobRequest(BaseModel, extra=Extra.forbid):
     message_type: Literal["V0JobRequest"] = Field(default="V0JobRequest")
     uuid: str
     miner_hotkey: str
+    executor_class: ExecutorClass
     docker_image: str
     raw_script: str
     args: list[str]
@@ -209,6 +211,7 @@ class ReceiptPayload(BaseModel):
     time_started: datetime
     time_took_us: int  # micro-seconds
     score_str: str
+    executor_class: ExecutorClass = DEFAULT_EXECUTOR_CLASS
 
     def blob_for_signing(self) -> str:
         data = to_jsonable_python(self)

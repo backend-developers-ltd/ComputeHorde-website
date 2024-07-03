@@ -1,3 +1,5 @@
+from compute_horde.executor_class import EXECUTOR_CLASS
+from django import forms
 from django.contrib import admin, messages
 from django.contrib.admin import register
 from django.db.models import QuerySet
@@ -163,11 +165,42 @@ class JobStatusInline(admin.TabularInline):
     ordering = ("created_at",)
 
 
+class JobAdminForm(forms.ModelForm):
+    executor_class = forms.ChoiceField()
+
+    class Meta:
+        model = Job
+        fields = [
+            "user",
+            "validator",
+            "miner",
+            "created_at",
+            "executor_class",
+            "docker_image",
+            "raw_script",
+            "args",
+            "env",
+            "use_gpu",
+            "input_url",
+            "output_download_url_expires_at",
+            "tag",
+            "output_upload_url",
+            "output_download_url",
+        ]
+
+    def __init__(self, *args, **kwargs):
+        super(__class__, self).__init__(*args, **kwargs)
+        if self.fields:
+            self.fields["executor_class"].choices = [(name, name) for name in EXECUTOR_CLASS]
+
+
 @register(Job)
 class JobAdmin(admin.ModelAdmin):
+    form = JobAdminForm
     list_display = (
         "pk",
         "user",
+        "executor_class",
         "docker_image",
         "created_at",
         "status",
@@ -224,6 +257,7 @@ class JobReceiptAdmin(admin.ModelAdmin):
         "time_started",
         "time_took",
         "score",
+        "executor_class",
     )
     search_fields = ("job_uuid", "miner_hotkey", "validator_hotkey")
     ordering = ("-time_started",)
