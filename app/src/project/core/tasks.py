@@ -193,11 +193,7 @@ def fetch_receipts_from_miner(hotkey: str, ip: str, port: int):
         csv_reader = csv.DictReader(wrapper)
         for raw_receipt in csv_reader:
             try:
-                executor_class = raw_receipt.get("executor_class")
-                if executor_class is None:
-                    executor_class = DEFAULT_EXECUTOR_CLASS
-                else:
-                    executor_class = ExecutorClass(executor_class)
+                executor_class = ExecutorClass(raw_receipt.get("executor_class", DEFAULT_EXECUTOR_CLASS))
                 receipt = Receipt(
                     payload=ReceiptPayload(
                         job_uuid=raw_receipt["job_uuid"],
