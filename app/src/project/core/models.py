@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from asgiref.sync import async_to_sync
 from channels.layers import get_channel_layer
+from compute_horde.executor_class import DEFAULT_EXECUTOR_CLASS
 from django.conf import settings
 from django.core.exceptions import ValidationError
 from django.db import models, transaction
@@ -152,6 +153,9 @@ class Job(models.Model):
     miner = models.ForeignKey(Miner, blank=True, on_delete=models.PROTECT, related_name="jobs")
     created_at = models.DateTimeField(default=now)
 
+    executor_class = models.CharField(
+        max_length=255, default=DEFAULT_EXECUTOR_CLASS, help_text="executor hardware class"
+    )
     docker_image = models.CharField(max_length=255, blank=True, help_text="docker image for job execution")
     raw_script = models.TextField(blank=True, help_text="raw script to be executed")
     args = models.TextField(blank=True, help_text="arguments passed to the script or docker image")
@@ -331,6 +335,7 @@ class Job(models.Model):
         return JobRequest(
             uuid=str(self.uuid),
             miner_hotkey=self.miner.ss58_address,
+            executor_class=self.executor_class,
             docker_image=self.docker_image,
             raw_script=self.raw_script,
             args=shlex.split(self.args),
@@ -597,6 +602,7 @@ class JobReceipt(models.Model):
     time_started = models.DateTimeField()
     time_took_us = models.BigIntegerField()
     score_str = models.CharField(max_length=256)
+    executor_class = models.CharField(max_length=255, default=DEFAULT_EXECUTOR_CLASS)
 
     class Meta:
         constraints = [

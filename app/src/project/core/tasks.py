@@ -13,6 +13,7 @@ import structlog
 from asgiref.sync import async_to_sync
 from celery.utils.log import get_task_logger
 from channels.layers import get_channel_layer
+from compute_horde.executor_class import DEFAULT_EXECUTOR_CLASS, ExecutorClass
 from constance import config
 from django.conf import settings
 from django.db import connection
@@ -192,6 +193,11 @@ def fetch_receipts_from_miner(hotkey: str, ip: str, port: int):
         csv_reader = csv.DictReader(wrapper)
         for raw_receipt in csv_reader:
             try:
+                executor_class = raw_receipt.get("executor_class")
+                if executor_class is None:
+                    executor_class = DEFAULT_EXECUTOR_CLASS
+                else:
+                    executor_class = ExecutorClass(executor_class)
                 receipt = Receipt(
                     payload=ReceiptPayload(
                         job_uuid=raw_receipt["job_uuid"],
@@ -200,6 +206,7 @@ def fetch_receipts_from_miner(hotkey: str, ip: str, port: int):
                         time_started=datetime.datetime.fromisoformat(raw_receipt["time_started"]),
                         time_took_us=int(raw_receipt["time_took_us"]),
                         score_str=raw_receipt["score_str"],
+                        executor_class=executor_class,
                     ),
                     validator_signature=raw_receipt["validator_signature"],
                     miner_signature=raw_receipt["miner_signature"],
@@ -231,6 +238,7 @@ def fetch_receipts_from_miner(hotkey: str, ip: str, port: int):
                     time_started=receipt.payload.time_started,
                     time_took_us=receipt.payload.time_took_us,
                     score_str=receipt.payload.score_str,
+                    executor_class=receipt.payload.executor_class,
                 )
             )
 

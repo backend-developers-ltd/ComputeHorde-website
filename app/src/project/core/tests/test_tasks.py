@@ -11,8 +11,12 @@ from constance import config
 from ..models import Channel, JobReceipt, Validator
 from ..tasks import fetch_receipts, sync_metagraph
 
-RAW_RECEIPT_PAYLOAD_1 = """{"miner_signature": "0xf840fe3fd112351b4a41dc8519b7f0c493af16e67bb98a8168654d8687b3ae6683bf6e8f36a96ecd70fa207ce332ba0c62e06e66f3d51ea01999e4252db0dd82", "payload": {"job_uuid": "0cce29bb-ea05-4c5e-a274-f185ccb117bc", "miner_hotkey": "5CPhGRp4cdEG4KSui7VQixHhvN5eBUSnMYeUF5thdxm4sKtz", "score_str": "1.661293", "time_started": "2024-05-18T16:00:11.796484+00:00", "time_took_us": 15241820, "validator_hotkey": "5Ctd7bcs7Fgsh5KzZuJZ72fMBvPp5Xwxj4RqWZ1m3UTM7oor"}, "validator_signature": "0x829817f57d46bd700c7fb979f97aa5f97378ef25c51c617704ed831a4386710b56a19dc3ed869d23e0e25da8636d92d68e1ef04efc55679e5914df984f5f3e8d"}"""
-RAW_RECEIPT_PAYLOAD_2 = """{"miner_signature": "0x1ec4f532d5b0f5494c5dfa5f84db7fe661202291367ffd798e20815700cd5a4146cb3dab713dead03b41f0085146b97d18df53ef22bb8fe49af84f79c296c68a", "payload": {"job_uuid": "0e93c887-879f-4332-a807-a42f42dfd73d", "miner_hotkey": "5CPhGRp4cdEG4KSui7VQixHhvN5eBUSnMYeUF5thdxm4sKtz", "score_str": "1.692837", "time_started": "2024-05-18T00:00:12.922840+00:00", "time_took_us": 27644673, "validator_hotkey": "5Ctd7bcs7Fgsh5KzZuJZ72fMBvPp5Xwxj4RqWZ1m3UTM7oor"}, "validator_signature": "0xe6717cbf7b5c30a4e9fc4b307be08f8624490ca1e693eb594adc4d60936aad3e690fa8ddd3e8edf7d4e81994487b996ec287cc9dddf4df7f3b634033c0bf658c"}"""
+RAW_RECEIPT_PAYLOAD_1 = """{"payload":{"job_uuid":"01584e70-3242-40b6-be69-65bca9d423c2","miner_hotkey":"5GBm3LTJpUGrkX9FXTS65Fx3Cqpz9zThgPx6gPuNdhdjjLm3","validator_hotkey":"5HpWwsSCHhmFuBtQPskPbjM4As3oXHH8Mgh9NGbyyiuHPABx","time_started":"2024-07-02T18:31:41.259730Z","time_took_us":30000000,"score_str":"0.1234","executor_class":"spin_up-4min.gpu-24gb"},"validator_signature":"0x5cd3a2a17d1bd844b1654aca30db1e9b76f4312c5b6d937c446696a2ac2ef848de1b306cf655b402a8a41dc8f79c0880066b63f380251ab5d49ef6c11ad08888","miner_signature":"0xf231018a49d6c95ba1fdd2a41df56564627bddbad65e0722cb3bf17fee99d634d0aa7c0f35ed2ebb2f8ff981b285222cecc80c215d9e0887ced0c52ce32dfd86"}"""
+RAW_RECEIPT_PAYLOAD_2 = """{"payload":{"job_uuid":"d10f1c3e-f90f-4fda-bf1b-38bb6d633fc3","miner_hotkey":"5GBm3LTJpUGrkX9FXTS65Fx3Cqpz9zThgPx6gPuNdhdjjLm3","validator_hotkey":"5HpWwsSCHhmFuBtQPskPbjM4As3oXHH8Mgh9NGbyyiuHPABx","time_started":"2024-07-02T18:32:34.172187Z","time_took_us":30000000,"score_str":"0.1234","executor_class":"spin_up-4min.gpu-24gb"},"validator_signature":"0xb0ab8d589348661ea3f0f990e3bcecf73bdd0e7d57589f8c21f74af8ffcb22024f41754b15ce97161353996b960d84c8a56785d383381a552263f473a861938d","miner_signature":"0xe049797f3120e781793e93aea5874887ff81c2f4a4fb3280f2fb28ba5f501f0dc29a8c6785fc89ca79bf901846f1fccf5b951a26ddd6ab710a2e4fd0f0ea6f8c"}"""
+
+MINER_HOTKEY = "5GBm3LTJpUGrkX9FXTS65Fx3Cqpz9zThgPx6gPuNdhdjjLm3"
+PAYLOAD_2_MINER_SIGNATURE = "0xe049797f3120e781793e93aea5874887ff81c2f4a4fb3280f2fb28ba5f501f0dc29a8c6785fc89ca79bf901846f1fccf5b951a26ddd6ab710a2e4fd0f0ea6f8c"
+PAYLOAD_2_VALIDATOR_SIGNATURE = "0xb0ab8d589348661ea3f0f990e3bcecf73bdd0e7d57589f8c21f74af8ffcb22024f41754b15ce97161353996b960d84c8a56785d383381a552263f473a861938d"
 
 
 class MockedAxonInfo(NamedTuple):
@@ -236,6 +240,7 @@ def fetch_receipts_test_helper(monkeypatch, mocked_responses, raw_receipt_payloa
             "time_started",
             "time_took_us",
             "score_str",
+            "executor_class",
             "validator_signature",
             "miner_signature",
         ]
@@ -251,6 +256,7 @@ def fetch_receipts_test_helper(monkeypatch, mocked_responses, raw_receipt_payloa
                 payload.get("time_started", ""),
                 payload.get("time_took_us", ""),
                 payload.get("score_str", ""),
+                payload.get("executor_class", ""),
                 receipt.get("validator_signature", ""),
                 receipt.get("miner_signature", ""),
             ]
@@ -272,7 +278,7 @@ def fetch_receipts_test_helper(monkeypatch, mocked_responses, raw_receipt_payloa
                     stake=0.0,
                 ),
                 MockedNeuron(
-                    hotkey="5CPhGRp4cdEG4KSui7VQixHhvN5eBUSnMYeUF5thdxm4sKtz",
+                    hotkey=MINER_HOTKEY,
                     axon_info=MockedAxonInfo(is_serving=True, ip="127.0.0.2", port=8000),
                     stake=0.0,
                 ),
@@ -299,6 +305,7 @@ def test__fetch_receipts__happy_path(monkeypatch, mocked_responses):
         assert instance.time_started == datetime.fromisoformat(receipt_payload["payload"]["time_started"])
         assert instance.time_took_us == receipt_payload["payload"]["time_took_us"]
         assert instance.score_str == receipt_payload["payload"]["score_str"]
+        assert instance.executor_class == receipt_payload["payload"]["executor_class"]
 
 
 @pytest.mark.django_db(transaction=True)
@@ -314,8 +321,8 @@ def test__fetch_receipts__invalid_receipt_skipped(monkeypatch, mocked_responses)
 @pytest.mark.django_db(transaction=True)
 def test__fetch_receipts__miner_hotkey_mismatch_skipped(monkeypatch, mocked_responses):
     invalid_receipt_payload = RAW_RECEIPT_PAYLOAD_2.replace(
-        "5CPhGRp4cdEG4KSui7VQixHhvN5eBUSnMYeUF5thdxm4sKtz",
-        "different-miner",
+        MINER_HOTKEY,
+        MINER_HOTKEY[:-4] + "AAAA",
     )
     fetch_receipts_test_helper(monkeypatch, mocked_responses, [RAW_RECEIPT_PAYLOAD_1, invalid_receipt_payload])
 
@@ -326,9 +333,10 @@ def test__fetch_receipts__miner_hotkey_mismatch_skipped(monkeypatch, mocked_resp
 
 @pytest.mark.django_db(transaction=True)
 def test__fetch_receipts__invalid_miner_signature_skipped(monkeypatch, mocked_responses):
+    invalid_char = "0" if PAYLOAD_2_MINER_SIGNATURE[-1] != "0" else "1"
     invalid_receipt_payload = RAW_RECEIPT_PAYLOAD_2.replace(
-        "0x1ec4f532d5b0f5494c5dfa5f84db7fe661202291367ffd798e20815700cd5a4146cb3dab713dead03b41f0085146b97d18df53ef22bb8fe49af84f79c296c68a",
-        "0x1ec4f532d5b0f5494c5dfa5f84db7fe661202291367ffd798e20815700cd5a4146cb3dab713dead03b41f0085146b97d18df53ef22bb8fe49af84f79c296c68b",
+        PAYLOAD_2_MINER_SIGNATURE,
+        PAYLOAD_2_MINER_SIGNATURE[:-1] + invalid_char,
     )
     fetch_receipts_test_helper(monkeypatch, mocked_responses, [RAW_RECEIPT_PAYLOAD_1, invalid_receipt_payload])
 
@@ -339,9 +347,10 @@ def test__fetch_receipts__invalid_miner_signature_skipped(monkeypatch, mocked_re
 
 @pytest.mark.django_db(transaction=True)
 def test__fetch_receipts__invalid_validator_signature_skipped(monkeypatch, mocked_responses):
+    invalid_char = "0" if PAYLOAD_2_VALIDATOR_SIGNATURE[-1] != "0" else "1"
     invalid_receipt_payload = RAW_RECEIPT_PAYLOAD_2.replace(
-        "0xe6717cbf7b5c30a4e9fc4b307be08f8624490ca1e693eb594adc4d60936aad3e690fa8ddd3e8edf7d4e81994487b996ec287cc9dddf4df7f3b634033c0bf658c",
-        "0xe6717cbf7b5c30a4e9fc4b307be08f8624490ca1e693eb594adc4d60936aad3e690fa8ddd3e8edf7d4e81994487b996ec287cc9dddf4df7f3b634033c0bf658d",
+        PAYLOAD_2_VALIDATOR_SIGNATURE,
+        PAYLOAD_2_VALIDATOR_SIGNATURE[:-1] + invalid_char,
     )
     fetch_receipts_test_helper(monkeypatch, mocked_responses, [RAW_RECEIPT_PAYLOAD_1, invalid_receipt_payload])
 
